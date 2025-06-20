@@ -1,0 +1,351 @@
+
+Search
+Write
+Sign up
+
+Sign in
+
+
+
+Node.js ReadStream and WriteStream Explained: A Beginner’s Journey
+Shailesh B
+Shailesh B
+
+Follow
+9 min read
+·
+May 2, 2024
+3
+
+
+
+
+
+image credits: https://nodesource.com/blog/dive-into-NodeJs-streams
+Welcome to the captivating world of streams in Node.js! In this blog, we will embark on an exciting journey to explore the realm of streams and delve into the powerful features of ReadStream and WriteStream.
+
+Streams provide a flexible and efficient way to handle data in Node.js, especially when dealing with large files or processing data in real-time. Throughout this blog, we will cover essential techniques, along with real-world examples, to help you fully grasp the potential of ReadStream and WriteStream. By the end of this journey, you will have a solid understanding of how to leverage streams for optimized file operations and data manipulation in your Node.js applications. Get ready to unlock the power of streams and take your Node.js skills to the next level!
+
+What are Streams?
+Streams in Node.js are like pipelines that enable us to read and write data from various sources. They make it easy to read data from files, network connections, or other sources, and write it to files, network connections, or other destinations. Streams are especially handy when working with large amounts of data since they process it in smaller, manageable chunks instead of all at once. They also offer a convenient way to transfer data between different sources and destinations without manual handling.
+
+In simpler words, the stream is the flow of data from one source to another.
+
+Types of stream
+There are four fundamental stream types within Node.js:
+
+Writable: streams to which data can be written (for example, fs.createWriteStream()).
+Readable: streams from which data can be read (for example, fs.createReadStream()).
+Duplex: streams that are both Readable and Writable (for example, net.Socket).
+Transform: Duplex streams that can modify or transform the data as it is written and read (for example, zlib.createDeflate()).
+This blog will explore the details of ReadStream and WriteStream, specifically highlighting their usage for file operations.
+
+WriteStream in NodeJS
+Writestream is a powerful stream type that enables developers to effortlessly write data to various destinations like files. With Writestream, you can seamlessly process substantial data volumes without concerns about memory consumption or performance bottlenecks. It offers a convenient solution for creating custom streams tailored to your application’s needs.
+
+Creating WriteStream
+In this blog, we will explore the various events, properties, and methods offered by the WriteStream object.
+
+To create a WriteStream in Node.js, we can use the createWriteStream function provided by the fs module. This function allows you to specify the filename you want to write to, and optionally, you can pass additional options as well.
+
+const fs = require("fs");
+
+// immediately invoked function expression (IIFE)
+(() => {
+    // creating writestream object
+    const writeStream = fs.createWriteStream("destination.txt")
+})()
+If the destination.txt file does not exist then write stream will create the file for you.
+
+To write data into a file using the WriteStream object, you can utilize the write method.
+
+const fs = require("fs");
+
+// immediately invoked function expression (IIFE)
+(() => {
+    // creating writestream object
+    const writeStream = fs.createWriteStream("destination.txt")
+
+    for (let index = 0; index < 100000; index++) {
+        writeStream.write(`${index} `)
+    }
+})()
+To properly handle the completion of writing data, it is important to close the WriteStream. We can achieve this by utilizing the close method on the WriteStream object. By invoking writeStream.close(), you ensure that any pending operations are finalized, resources are released, and the WriteStream is gracefully closed.
+
+const writeStream = fs.createWriteStream("destination.txt")
+writeStream.close()
+When you call writeStream.write(data) in Node.js, the data is not immediately written directly into the file instead, it is initially written to a buffer. The buffer acts as a temporary storage area for the data. As more data is written, it accumulates in the buffer until it reaches its capacity.
+
+Once the buffer is full, the entire contents of the buffer are written to the file. This process ensures that the data is efficiently written in chunks, reducing the number of disk operations and improving overall performance. It also helps in optimizing resource utilization, especially when dealing with large amounts of data.
+
+By default, the buffer size for a WriteStream in Node.js is set to 16kB (16384 bytes), which is known as the highWaterMark value. However, you have the flexibility to modify this value according to your specific requirements.
+
+To change the highWaterMark value when creating a WriteStream, you can use the fs.createWriteStream method and provide the desired value as an option. For example:
+
+fs.createWriteStream("destination.txt", { highWaterMark: 400 });
+In this example, the highWaterMark value is set to 400 bytes. Adjusting the highWaterMark allows you to control the buffer size and optimize the balance between memory consumption and the frequency of disk writes.
+
+To avoid memory issues, it’s important to empty the buffer before writing more data to a file. When the buffer becomes full, any additional data will be stored in memory until the buffer is cleared. Accumulating data in the buffer without emptying it can consume excessive memory, especially with large datasets, leading to performance and stability problems.
+
+To avoid memory issues, the WriteStream object’s write methods return a boolean indicating if the buffer is full. By pausing or stopping the data source while writing, we can prevent excessive data accumulation. The WriteStream also emits a “drain” event when the buffer is emptied and the data is successfully written to the file. By listening to this event, we can know when it’s safe to resume reading from the source.
+
+Here is an example of the same
+
+const fs = require("fs");
+
+// immediately invoked function expression (IIFE)
+(() => {
+    // creating writestream object
+    const writeStream = fs.createWriteStream("destination.txt")
+
+  let i = 0
+  let MAX_WRITE = 10000000
+
+  const writeToFile = () => {
+
+    while (i < MAX_WRITE) {
+
+      if (i === MAX_WRITE - 1) {
+        return writeStream.end(`${i} `)
+      }
+
+      const isWrite = writeStream.write(`${i} `)
+
+      if (!isWrite) break
+      i++
+    }
+  }
+
+  writeToFile()
+
+  writeStream.on("drain", () => {
+    console.log("Draining");
+    writeToFile()
+  })
+
+  writeStream.on("finish", () => {
+    console.log("finish event emitted")
+    writeStream.close()
+  })
+
+})()
+In the given example, a WriteStream object is created to write data to a file called “destination.txt”. The purpose is to write a sequence of numbers from 0 to 10,000,000 in that file. To accomplish this, a function named writeToFile is defined, which handles the writing process.
+
+Inside the writeToFile function, two methods provided by the WriteStream object are utilized. The write method is used to write each number to the stream, ensuring that the data is stored in the file. This method also returns a boolean value that indicates whether the buffer used for writing is full or not.
+
+When all the numbers have been written, the end method is called. This signifies that it is the final write operation, allowing the WriteStream to complete any remaining writes and finalize the writing process. Upon finishing, the WriteStream emits a special event called finish, which can be utilized to perform any necessary tasks, such as gracefully closing the WriteStream.
+
+ReadStream in NodeJS
+Understanding the ReadStream object is indeed simpler once you are familiar with the WriteStream. Creating a ReadStream object in Node.js follows a similar approach to creating a WriteStream object.
+
+Here is an example for creating readstream object.
+
+const fs = require("fs")
+const readStream = fs.createReadStream("src.txt");
+Similar to the WriteStream object, the ReadStream object provides a range of events, properties, and methods. One important property of the ReadStream object is the highWaterMark, which specifies the size of the internal buffer used for reading data. In the case of the ReadStream, the default value of the highWaterMark property is 64kB (65536 bytes).
+
+Readstream reads data from a source and stores it in a buffer. To access and work with this data, we can utilize the data event provided by the ReadStream.
+
+const readStream = fs.createReadStream("../src.txt")
+
+readStream.on("data", (chunk) => {
+    console.log(chunk.toString());
+})
+By registering a listener for the data event using the on method, we can specify a function to be executed whenever new data becomes available. In the given example, the listener function takes a parameter called chunk, which represents a portion of the data read from the source. It's important to note that the data received through the data event is in bytes. To work with this data as a string, we can use the toString() function to convert it into a readable format.
+
+In the ReadStream object, there is an end event that is triggered when all the data has been read from the source. This event serves as an indicator that the reading process is complete.
+
+To gracefully close the ReadStream after reading is finished, we can use the close() method provided by the ReadStream object. Invoking readstream.close() allows us to properly terminate the ReadStream and release any associated resources.
+
+By closing the ReadStream, we ensure that all operations related to reading data are finalized, preventing any potential memory leaks or unnecessary resource usage.
+
+const readStream = fs.createReadStream("../src.txt")
+
+readStream.on("data", (chunk) => {
+    console.log(chunk); // output -> <Buffer 48 65 6c 6c 6f 20 57 6f 72 6c 64>
+    console.log(chunk.toString());
+})
+
+readStream.on("end", () => {
+    readStream.close()
+})
+In the ReadStream object, data is not read from the source until the data event is triggered on the ReadStream. This means that the ReadStream waits for the data event to occur before actively fetching and processing data from the source.
+
+The ReadStream in Node.js offers two essential methods: pause and resume. These methods play a vital role when we need to control the reading process by pausing and resuming it.
+
+The pause method does exactly what its name suggests - it pauses the ReadStream. When we invoke this method, it temporarily halts the reading process, giving us the ability to stop consuming data from the source. This can be useful in various situations, such as when we want to prioritize other tasks or when we need to handle data at a slower pace.
+
+On the other hand, the resume method allows us to restart the ReadStream after it has been paused. Once we call this method, the ReadStream continues from where it left off, ensuring that we don't miss any data from the source. This is particularly valuable when we're ready to consume the data again or when we've finished performing a task that required the ReadStream to be paused.
+
+Here is a basic example of using all the concepts that I have covered in this blog.
+
+const basicReadWrite = async () => {
+  const readStream = fs.createReadStream("../src.txt")
+  const writeStream = fs.createWriteStream("../dest2.txt")
+
+  writeStream.on("drain", () => {
+    console.log("drain called");
+    readStream.resume()
+  })
+
+  readStream.on("data", (chunk) => {
+    if (!writeStream.write(chunk)) {
+      readStream.pause()
+    }
+  })
+
+  readStream.on("end", () => {
+    readStream.close()
+  })
+}
+
+basicReadWrite()
+Conclusion
+In conclusion, understanding the concepts of ReadStream and WriteStream in Node.js opens up a world of possibilities for handling large amounts of data efficiently. These powerful tools provide us with the means to read data from a file or stream it in real-time, as well as write data to a file or another stream. With their simple yet effective APIs, ReadStream and WriteStream make it easier than ever to handle data operations seamlessly.
+
+By leveraging the capabilities of ReadStream, we can read data in chunks, enabling efficient memory usage and faster processing. This is particularly useful when dealing with large files or streaming data from external sources. The ability to handle data incrementally not only improves performance but also allows us to apply transformations or perform actions on the fly, making our applications more responsive and versatile. On the other hand, WriteStream empowers us to efficiently write data to a file or a stream, piece by piece. This is crucial when dealing with large data sets or when the data is being generated dynamically. By chunking the data and writing it in smaller portions, we can minimize memory consumption and optimize the overall process. Additionally, WriteStream provides convenient methods to handle events and ensure data integrity. When used together, ReadStream and WriteStream form a powerful duo, enabling seamless data processing pipelines. We can effortlessly read data from a ReadStream, perform any necessary operations or transformations, and then write the processed data to a WriteStream. This allows us to build efficient data pipelines, which are especially beneficial in scenarios where data needs to be transformed or transmitted in real-time.
+
+Node.js has truly revolutionized the way we handle I/O operations, and ReadStream and WriteStream are prime examples of its capabilities. Whether you’re working with large files, streaming data, or processing data in real-time, these features provide the flexibility and performance you need. So, embrace the power of ReadStream and WriteStream in Node.js, and unlock a whole new level of data processing capabilities. Start exploring their APIs, experimenting with different scenarios, and witness firsthand how they can enhance the efficiency, speed, and overall performance of your applications. Happy coding!
+
+Nodejs
+Writestream
+Readstream
+Streams
+3
+
+
+
+Shailesh B
+Written by Shailesh B
+4 followers
+·
+4 following
+
+Follow
+No responses yet
+
+Write a response
+
+What are your thoughts?
+
+Cancel
+Respond
+More from Shailesh B
+Logging with Logrus: Streamlining MongoDB Integration
+Shailesh B
+Shailesh B
+
+Logging with Logrus: Streamlining MongoDB Integration
+Logging plays a crucial role in modern programming by capturing errors, warnings, performance metrics, and debug messages. It serves as a…
+Apr 27, 2024
+66
+Effortless CSV Parsing in Golang: A Hands-On Approach
+Shailesh B
+Shailesh B
+
+Effortless CSV Parsing in Golang: A Hands-On Approach
+Streamlining Data Extraction with Golang’s Efficient CSV Handling Library
+Apr 9, 2024
+13
+See all from Shailesh B
+Recommended from Medium
+Introducing logctx: A Lightweight, Context-Aware Logger for Node.js
+Dev Genius
+In
+
+Dev Genius
+
+by
+
+Ajay Kumar Pandit
+
+Introducing logctx: A Lightweight, Context-Aware Logger for Node.js
+“Logging without context is like debugging blindfolded.”
+
+May 24
+🧠 Master Kubernetes in Minutes: This Kubernetes Cheatsheet Has Everything You Need
+Stackademic
+In
+
+Stackademic
+
+by
+
+Ashish Singh
+
+🧠 Master Kubernetes in Minutes: This Kubernetes Cheatsheet Has Everything You Need
+Master essential kubectl commands, YAML examples, and real-world debugging tips with this hands-on Kubernetes guide—perfect for beginners…
+
+4d ago
+103
+1
+I Built the Same API in Python and Node.js — One Choked Under Load
+TechPreneur
+TechPreneur
+
+I Built the Same API in Python and Node.js — One Choked Under Load
+What happens when two popular runtimes go head-to-head in a real-world API benchmark?
+
+5d ago
+36
+OIDC: The Fellowship of the Token (Part III)
+InfoSec Write-ups
+In
+
+InfoSec Write-ups
+
+by
+
+Jehad Nasser
+
+OIDC: The Fellowship of the Token (Part III)
+One token to rule them all, one token to find them, One token to bring them all, and in the cluster spawn them (I meant the pods.).
+
+Jun 5
+29
+This new IDE from Google is an absolute game changer
+Coding Beauty
+In
+
+Coding Beauty
+
+by
+
+Tari Ibaba
+
+This new IDE from Google is an absolute game changer
+This new IDE from Google is seriously revolutionary.
+
+Mar 12
+5.9K
+357
+I Ran a Billion Requests Through 6 Web Frameworks — Here’s Who Survived the Fire
+TheOptimizationKing
+TheOptimizationKing
+
+I Ran a Billion Requests Through 6 Web Frameworks — Here’s Who Survived the Fire
+If you’ve ever stared at your production metrics at 3 A.M. while your API melts under traffic, you know this truth: framework choice…
+
+5d ago
+13
+2
+See more recommendations
+Help
+
+Status
+
+About
+
+Careers
+
+Press
+
+Blog
+
+Privacy
+
+Rules
+
+Terms
+
+Text to speech
