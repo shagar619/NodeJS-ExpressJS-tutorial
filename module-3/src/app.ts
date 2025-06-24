@@ -1,11 +1,10 @@
-import express, { Application, Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
+import express, { Application, NextFunction, Request, Response } from 'express';
+import { todosRouter } from './app/todos/todos.routes';
 const app: Application = express();
 
 app.use(express.json());
 
-const todosRouter = express.Router();
+
 const userRouter = express.Router();
 
 app.use('/todos', todosRouter);
@@ -13,15 +12,34 @@ app.use('/users', userRouter);
 
 
 
-app.get('/', (req: Request, res: Response) => {
-    res.send('The server is running on port 5000!');
+app.get('/', (req: Request, res: Response, next: NextFunction) => {
+    console.log({
+        url: req.url,
+        method: req.method,
+        header: req.header
+    });
+    next()
+},
+
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            res.send('Welcome to Todos App')
+        } catch (error) {
+            next(error)
+        }
 });
 
 
-app.post('/todo/create-todo', (req: Request, res: Response) => {
-    const { title, body } = req.body;
-    console.log(`Title: ${title}, Body: ${body}`);
-    res.send('Todo created successfully!');
+app.use((req: Request, res: Response, next: NextFunction) => {
+    res.status(404).json({ message: "Route not found" })
+});
+
+
+app.use((error: any, req: Request, res: Response, next: NextFunction) => {
+    if (error) {
+        console.log("error", error);
+        res.status(400).json({ message: "Something went wrong from global error handler", error })
+    }
 });
 
 export default app;
